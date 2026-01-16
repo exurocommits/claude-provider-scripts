@@ -1,0 +1,11 @@
+# Ignore backup files
+*.bak
+
+# Ignore API keys and sensitive data
+*api_key*
+*token*
+*secret*
+
+# Ignore temporary files
+*.tmp
+*.log
