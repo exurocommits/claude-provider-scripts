@@ -1,6 +1,10 @@
 # Claude Code Provider Switching Scripts
 
-PowerShell scripts for seamlessly switching between Anthropic Claude and ZAI/GLM model providers in Claude Code CLI.
+Cross-platform scripts for seamlessly switching between Anthropic Claude and ZAI/GLM model providers in Claude Code CLI.
+
+**📂 Platform Support:**
+- **Windows** - PowerShell scripts (this directory)
+- **Linux/macOS** - Bash scripts ([`linux/` folder](./linux/README.md))
 
 ## Why This Exists
 
@@ -20,10 +24,14 @@ Instead of manually editing configuration files, these scripts provide instant p
 
 ## Prerequisites
 
+### Windows (This Guide)
 - Windows 11 with PowerShell 7+
 - Claude Code CLI installed
 - Git Bash or similar (for running the scripts)
 - Z.AI API key (if using GLM models) - Get yours at: https://z.ai/manage-apikey/apikey-list
+
+### Linux/macOS
+**→ See [`linux/README.md`](./linux/README.md) for Linux/macOS installation**
 
 ## Installation
 
