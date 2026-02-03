@@ -37,7 +37,7 @@ Instead of manually editing configuration files, these scripts provide instant p
 
 ### 1. Clone or Copy Scripts
 
-Place these files in `C:\Users\<YourUsername>\scripts\`:
+Place these files in `C:\Users\<YourUsername>\.claude\scripts\`:
 - `ClaudeProfile.ps1`
 - `Switch-ClaudeProvider.ps1`
 - `claudeglm.ps1`
