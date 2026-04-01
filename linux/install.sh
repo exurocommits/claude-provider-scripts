@@ -70,11 +70,12 @@ install_scripts() {
     cp "$SCRIPT_DIR/claude_profile.sh" "$INSTALL_DIR/"
     cp "$SCRIPT_DIR/switch_provider.sh" "$INSTALL_DIR/"
     cp "$SCRIPT_DIR/claudeglm.sh" "$INSTALL_DIR/"
-    cp "$SCRIPT_DIR/claude_provider_config.sh" "$INSTALL_DIR/"
+    cp "$SCRIPT_DIR/claudeali.sh" "$INSTALL_DIR/"
     
     # Make executable
     chmod +x "$INSTALL_DIR/switch_provider.sh"
     chmod +x "$INSTALL_DIR/claudeglm.sh"
+    chmod +x "$INSTALL_DIR/claudeali.sh"
     
     echo -e "${GREEN}✓ Scripts installed${NC}"
     
@@ -143,7 +144,7 @@ uninstall_scripts() {
     rm -f "$INSTALL_DIR/claude_profile.sh"
     rm -f "$INSTALL_DIR/switch_provider.sh"
     rm -f "$INSTALL_DIR/claudeglm.sh"
-    rm -f "$INSTALL_DIR/claude_provider_config.sh"
+    rm -f "$INSTALL_DIR/claudeali.sh"
     
     echo -e "${GREEN}✓ Scripts removed${NC}"
     echo
@@ -173,6 +174,7 @@ WHAT GETS INSTALLED:
     - claude_profile.sh       Main profile script (source this)
     - switch_provider.sh      Standalone switching script
     - claudeglm.sh            Session-only GLM launcher
+    - claudeali.sh            Session-only Alibaba (Qwen) launcher
     - claude_provider_config.sh  Configuration template
 
 After installation, add to your ~/.bashrc or ~/.zshrc:

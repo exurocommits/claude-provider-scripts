@@ -1,6 +1,6 @@
 # Claude Code Provider Switching Scripts (Linux/macOS)
 
-Bash scripts for seamlessly switching between Anthropic Claude and ZAI/GLM model providers in Claude Code CLI.
+Bash scripts for seamlessly switching between Anthropic Claude, ZAI/GLM, and Alibaba Cloud Qwen model providers in Claude Code CLI.
 
 > **Ported from:** [exurocommits/claude-provider-scripts](https://github.com/exurocommits/claude-provider-scripts) (PowerShell version)
 
@@ -10,15 +10,16 @@ These scripts solve the problem of switching between different LLM providers whi
 
 - **Anthropic Claude** - Your subscription-based models (Sonnet, Opus, Haiku)
 - **ZAI/GLM Models** - Alternative providers (glm-4.7, glm-4.5-air) via Z.AI
+- **Alibaba Cloud (Qwen)** - Models via Alibaba Cloud Model Studio (Coding Plan)
 
 Instead of manually editing configuration files, these scripts provide instant provider switching with simple commands.
 
 ## Features
 
 - 🔄 **One-command switching** between providers
-- 🚀 **Session-specific launches** - Use GLM for single sessions without changing defaults
+- 🚀 **Session-specific launches** - Use GLM or Alibaba for single sessions without changing defaults
 - 🔐 **Secure API key storage** - Keys stored in `~/.claude/api_keys_backup.json`
-- 🎨 **Visual indicators** - Terminal title shows `[GLM]` or `[Anthropic]` prefix
+- 🎨 **Visual indicators** - Terminal title shows `[GLM]`, `[Alibaba]`, or `[Anthropic]` prefix
 - 📋 **Built-in help** - Type `hint` to see all available commands
 
 ### Key Feature: Two Switching Modes
@@ -35,6 +36,7 @@ Instead of manually editing configuration files, these scripts provide instant p
 - **jq** (JSON processor) - required
 - Claude Code CLI installed
 - Z.AI API key (for GLM) - Get yours at: https://z.ai/manage-apikey/apikey-list
+- Alibaba Cloud API key (for Qwen) - Get yours at: https://modelstudio.console.alibabacloud.com/ (Singapore region)
 
 ## Installation
 
@@ -98,8 +100,9 @@ source ~/.bashrc   # or source ~/.zshrc
 | `cswitch GLM` | Switch to GLM provider (permanent) |
 | `cswitch Anthropic` | Switch to Anthropic provider (permanent) |
 | `claudeglm` | Launch Claude with GLM (session only) |
+| `claudeali` | Launch Claude with Alibaba Qwen (session only) |
 | `claude-info` | Show current provider configuration |
-| `claude-reset` | Clear GLM env vars to return to Anthropic |
+| `claude-reset` | Clear GLM/Alibaba env vars to return to Anthropic |
 | `hint` or `hh` | Show all available commands |
 
 ### Examples
@@ -139,6 +142,23 @@ Output:
 
 Provider: GLM (Z.AI)
 Models: Sonnet/Opus → glm-4.7, Haiku → glm-4.5-air
+
+Launching Claude Code...
+```
+
+**Launch single Alibaba session (safe for concurrent use):**
+```bash
+claudeali
+```
+Output:
+```
+=== Launching Claude Code with Alibaba Cloud Provider ===
+✅ Using ENVIRONMENT VARIABLES (safe for concurrent sessions)
+✅ Does NOT modify settings.json
+
+Provider: Alibaba Cloud Model Studio (Coding Plan)
+Base URL: coding-intl.dashscope.aliyuncs.com/apps/anthropic
+Model: qwen3-plus (all tiers)
 
 Launching Claude Code...
 ```
@@ -200,7 +220,7 @@ Sets environment variables **only for that process**:
 
 Keys stored in `~/.claude/api_keys_backup.json`:
 ```json
-{"GLM": "your-api-key"}
+{"GLM": "your-glm-api-key", "ALIBABA": "your-alibaba-api-key"}
 ```
 File permissions set to `600` (owner read/write only).
 
@@ -209,18 +229,20 @@ File permissions set to `600` (owner read/write only).
 ```
 ~/.claude/
 ├── settings.json           # Claude Code settings (managed by cswitch)
-└── api_keys_backup.json    # Your GLM API key (secure storage)
+└── api_keys_backup.json   # Your API keys (secure storage)
 
 ~/scripts/
 ├── claude_profile.sh       # Main profile (source this in .bashrc/.zshrc)
 ├── switch_provider.sh      # Standalone switching script
-└── claudeglm.sh            # Session-only GLM launcher
+├── claudeglm.sh            # Session-only GLM launcher
+└── claudeali.sh            # Session-only Alibaba (Qwen) launcher
 ```
 
 ## Visual Indicators
 
 Terminal title automatically updates:
 - `[GLM] bash` - Using GLM provider
+- `[Alibaba] bash` - Using Alibaba Cloud provider
 - `[Anthropic] bash` - Using Anthropic provider
 
 ## Troubleshooting
@@ -247,6 +269,7 @@ Some terminals don't support title changes. Functionality still works.
 rm ~/scripts/claude_profile.sh
 rm ~/scripts/switch_provider.sh
 rm ~/scripts/claudeglm.sh
+rm ~/scripts/claudeali.sh
 
 # Remove source line from shell profile
 # Edit ~/.bashrc or ~/.zshrc and remove the line:

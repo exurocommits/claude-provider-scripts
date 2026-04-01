@@ -1,217 +1,219 @@
 # Claude Code Provider Switching Scripts
 
-Cross-platform scripts for seamlessly switching between Anthropic Claude and ZAI/GLM model providers in Claude Code CLI.
+Cross-platform scripts for seamlessly switching between Anthropic, ZAI/GLM, and Alibaba Cloud model providers in Claude Code CLI, with automatic session integrity repair for foreign-provider sessions.
 
-**📂 Platform Support:**
+**Platform Support:**
 - **Windows** - PowerShell scripts (this directory)
 - **Linux/macOS** - Bash scripts ([`linux/` folder](./linux/README.md))
 
 ## Why This Exists
 
-These scripts solve the problem of switching between different LLM providers while using Claude Code:
-- **Anthropic Claude** - Your subscription-based models (Sonnet, Opus, Haiku)
-- **ZAI/GLM Models** - Alternative providers (glm-4.7, glm-4.5-air) via Z.AI
+These scripts solve two problems when using Claude Code with alternative LLM providers:
 
-Instead of manually editing configuration files, these scripts provide instant provider switching with simple commands.
+1. **Provider switching** - Instantly switch between Anthropic, GLM (Z.AI), and Alibaba Cloud (Qwen) without manually editing config files.
+2. **Session integrity** - Sessions created under a foreign provider (GLM, Alibaba) contain non-Anthropic message formats (model IDs, tool call IDs, usage fields). Resuming these sessions on Anthropic causes errors. The session repair system automatically normalizes foreign messages before resume.
 
 ## Features
 
-- 🔄 **One-command switching** between providers
-- 🎨 **Visual indicators** - Window title shows current provider ([GLM] or [Anthropic])
-- 🔐 **Secure API key storage** - Keys stored separately and loaded automatically
-- 🚀 **Session-specific launches** - Use GLM for single sessions without changing defaults
-- 📋 **Built-in help** - Type `hint` to see all available commands
+- **One-command switching** between providers (`cswitch`)
+- **Session-only launchers** - `claudeglm` / `claudeali` use env vars, never touch `settings.json`
+- **Automatic session tagging** - Launchers record which provider created each session
+- **Session repair on resume** - `claude-resume` auto-detects and repairs foreign sessions before resuming
+- **Manual repair tools** - `claude-repair` and `claude-check` for targeted diagnostics
+- **Visual indicators** - Window title shows current provider ([GLM], [Alibaba], or [Anthropic])
+- **Flag passthrough** - All commands pass extra flags directly to `claude` CLI
+- **Built-in help** - Type `hint` to see all available commands
 
 ## Prerequisites
 
-### Windows (This Guide)
+### Windows
 - Windows 11 with PowerShell 7+
 - Claude Code CLI installed
-- Git Bash or similar (for running the scripts)
-- Z.AI API key (if using GLM models) - Get yours at: https://z.ai/manage-apikey/apikey-list
+- Z.AI API key (if using GLM models): https://z.ai/manage-apikey/apikey-list
 
 ### Linux/macOS
-**→ See [`linux/README.md`](./linux/README.md) for Linux/macOS installation**
+- Bash 4+ or Zsh
+- `jq` (JSON processor)
+- `node` (for session repair)
+- See [`linux/README.md`](./linux/README.md) for full installation instructions
 
 ## Installation
 
-### 1. Clone or Copy Scripts
+### Linux/macOS
 
-Place these files in `C:\Users\<YourUsername>\.claude\scripts\`:
-- `ClaudeProfile.ps1`
-- `Switch-ClaudeProvider.ps1`
-- `claudeglm.ps1`
+1. Clone this repo or copy the files to `~/scripts/`:
+   ```bash
+   git clone https://github.com/exurocommits/claude-provider-scripts.git ~/scripts
+   ```
 
-### 2. Update PowerShell Profile
+2. Source the profile in your shell config (`~/.bashrc` or `~/.zshrc`):
+   ```bash
+   source ~/scripts/linux/claude_profile.sh
+   ```
 
-Add this to your PowerShell profile (`$PROFILE` or `~\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1`):
+3. Reload your shell:
+   ```bash
+   source ~/.bashrc   # or source ~/.zshrc
+   ```
 
-```powershell
-# Claude Code Provider Switching
-$claudeProfilePath = "$env:USERPROFILE\scripts\ClaudeProfile.ps1"
-if (Test-Path $claudeProfilePath) {
-    . $claudeProfilePath
-}
-```
+### Windows (PowerShell)
 
-### 3. Reload Profile
+1. Place scripts in `C:\Users\<YourUsername>\.claude\scripts\`
+2. Add to your PowerShell profile (`$PROFILE`):
+   ```powershell
+   $claudeProfilePath = "$env:USERPROFILE\scripts\ClaudeProfile.ps1"
+   if (Test-Path $claudeProfilePath) { . $claudeProfilePath }
+   ```
+3. Restart PowerShell or run `. $PROFILE`
 
-Restart PowerShell or run:
-```powershell
-. $PROFILE
-```
+## Commands Reference
 
-## Usage
-
-### Quick Commands
+### Provider Switching
 
 | Command | Description |
 |---------|-------------|
 | `cswitch` | Toggle between GLM and Anthropic |
 | `cswitch GLM` | Switch to GLM provider |
 | `cswitch Anthropic` | Switch to Anthropic provider |
-| `claudeglm` | Launch Claude with GLM (session only) |
+| `claudeglm [flags]` | Launch single session with GLM (env vars only) |
+| `claudeali [flags]` | Launch single session with Alibaba/Qwen (env vars only) |
+| `claude-reset` | Clear custom env vars, return to Anthropic |
 | `claude-info` | Show current provider configuration |
-| `claude-reset` | Clear GLM env vars, return to Anthropic |
-| `hint` or `hh` | Show all custom shortcuts |
+| `hint` / `hh` | Show all custom shortcuts |
 
-### Examples
+### Session Repair
 
-**Switch to GLM models:**
-```powershell
-cswitch GLM
+| Command | Description |
+|---------|-------------|
+| `claude-resume` | Repair all foreign sessions, then `claude -r` |
+| `claude-resume <uuid>` | Repair specific session, then `claude --resume <uuid>` |
+| `claude-repair <uuid>` | Repair a specific session file |
+| `claude-repair --all` | Repair all tagged foreign sessions |
+| `claude-check <uuid>` | Dry-run check a session for issues (no changes) |
+
+### Flag Passthrough Examples
+
+All commands pass extra arguments through to the `claude` CLI:
+
+```bash
+# Resume last session with auto-repair, skip permission prompts
+claude-resume --dangerously-skip-permissions
+
+# Resume specific session with skip permissions
+claude-resume abc12345-1234-5678-9abc-def012345678 --dangerously-skip-permissions
+
+# Launch GLM session and resume last conversation
+claudeglm -r
+
+# Launch Alibaba session with custom flags
+claudeali --dangerously-skip-permissions
 ```
-- Prompts for Z.AI API key (first time only)
-- Updates `~\.claude\settings.json`
-- Sets window title to `[GLM]`
 
-**Switch back to Anthropic:**
-```powershell
-cswitch Anthropic
-```
-- Removes GLM configuration
-- Reverts to Claude subscription models
-- Sets window title to `[Anthropic]`
+## Session Repair System
 
-**Launch single GLM session (safe for concurrent use):**
-```powershell
-claudeglm
-```
-- Uses environment variables only
-- Doesn't modify settings.json
-- Run Claude normally in other terminals
+### The Problem
 
-**Check current configuration:**
-```powershell
-claude-info
-```
-Shows:
-- Active provider
-- Base URL
-- Model mappings (Sonnet/Opus/Haiku)
+When you use a foreign provider (GLM, Alibaba) to run a Claude Code session, the session JSONL file contains provider-specific formats:
+- Non-`claude-*` model IDs (e.g., `glm-4.7`)
+- Non-`msg_` message IDs
+- Non-`toolu_` tool use IDs
+- OpenAI-style usage fields (`prompt_tokens` instead of `input_tokens`)
+- Non-standard `stop_reason` values (`stop` instead of `end_turn`)
 
-### Visual Indicators
+Resuming such a session on Anthropic fails because the API rejects these formats.
 
-Your terminal window title automatically updates:
-- `[GLM] PowerShell` - Using GLM models
-- `[Anthropic] PowerShell` - Using Claude subscription
+### The Solution
+
+The repair system (`lib/session-repair.mjs`) normalizes foreign messages:
+- Model IDs remapped to `claude-sonnet-4-5-20250514`
+- Message IDs regenerated with `msg_` prefix
+- Tool use IDs sanitized to `toolu_` prefix
+- Corresponding `tool_result.tool_use_id` references updated to match
+- Usage fields converted from OpenAI to Anthropic format
+- Stop reasons mapped (`stop` -> `end_turn`, `tool_calls` -> `tool_use`)
+- Content blocks sorted: thinking -> text -> tool_use
+- Original session backed up to `~/.claude/session_backups/`
+
+### How Tagging Works
+
+When you launch via `claudeglm` or `claudeali`, the launcher:
+1. Snapshots the session index before launch
+2. Runs `claude` with the provider env vars
+3. Diffs the session index after exit
+4. Tags new sessions in `~/.claude/session_providers.json` with provider and timestamp
+
+The guard (`lib/session-guard.mjs`) uses these tags to detect foreign sessions. It also falls back to scanning the JSONL for non-`claude-*` model IDs if no tag is found.
 
 ## How It Works
 
 ### Configuration Files
 
-**Settings File:** `~\.claude\settings.json`
-- Modified by `cswitch` command
-- Contains provider configuration in `env` section
-
-**API Key Backup:** `~\.claude\api_keys_backup.json`
-- Stores GLM API key securely
-- Loaded automatically on switch
+| File | Purpose |
+|------|---------|
+| `~/.claude/settings.json` | Provider config (modified by `cswitch`) |
+| `~/.claude/api_keys_backup.json` | Stored API keys for quick switching |
+| `~/.claude/session_providers.json` | Session-to-provider tag map (auto-generated) |
+| `~/.claude/session_backups/` | Pre-repair backups of session JSONL files |
 
 ### GLM Configuration
 
-When switching to GLM, the scripts set:
+When switching to GLM, the scripts set these environment variables (or `settings.json` fields):
 ```json
 {
-  "env": {
-    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
-    "ANTHROPIC_AUTH_TOKEN": "your-zai-api-key",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4.7",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-4.7",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.5-air"
-  }
+  "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+  "ANTHROPIC_AUTH_TOKEN": "<your-zai-api-key>",
+  "ANTHROPIC_DEFAULT_SONNET_MODEL": "glm-4.7",
+  "ANTHROPIC_DEFAULT_OPUS_MODEL": "glm-4.7",
+  "ANTHROPIC_DEFAULT_HAIKU_MODEL": "glm-4.5-air"
 }
 ```
-
-### Anthropic Configuration
-
-When switching to Anthropic, the scripts:
-1. Remove all GLM-specific environment variables
-2. Remove the entire `env` section if empty
-3. Claude Code defaults to subscription models
 
 ## Troubleshooting
 
 ### "API key required" error
 Run `cswitch GLM` and enter your Z.AI API key when prompted.
 
+### Session resume fails after provider switch
+Run `claude-repair <session-uuid>` or `claude-resume` (which auto-repairs).
+
 ### Settings not updating
-- Ensure `~\.claude\settings.json` exists
+- Ensure `~/.claude/settings.json` exists
 - Check file permissions
-- Try running PowerShell as administrator
+- Try reloading your shell profile
 
 ### Provider not switching
 - Close all Claude Code instances
 - Run `cswitch` again
-- Open new terminal to verify with `claude-info`
+- Open new terminal and verify with `claude-info`
 
-### Window title not updating
-Reload profile: `. $PROFILE`
+## Script Architecture
 
-### Authentication errors with Anthropic
-- Run `claude` CLI to re-authenticate
-- Ensure you're logged in: Check for OAuth token at `~\.claude\oauth_token.json`
-
-## Script Details
-
-### ClaudeProfile.ps1
-Main profile script containing:
-- `cswitch` - Provider switching function
-- `claudeglm` - GLM launcher
-- `claude-reset` - Environment cleaner
-- `claude-info` - Configuration viewer
-- `hint` - Help command
-- Window title management
-
-### Switch-ClaudeProvider.ps1
-Core switching logic:
-- Reads/writes settings.json
-- Manages API key storage
-- Toggles provider configuration
-- Validates settings
-
-### claudeglm.ps1
-Session-specific GLM launcher:
-- Sets environment variables
-- Launches Claude Code
-- Doesn't modify global settings
-
-## Tips
-
-- Use `claudeglm` for one-off GLM sessions while keeping Anthropic as default
-- Use `cswitch` to permanently change your default provider
-- Check window title at a glance to see current provider
-- Run `hint` if you forget the commands
+```
+claude-provider-scripts/
+  ClaudeProfile.ps1          # Windows: profile with all shell functions
+  Switch-ClaudeProvider.ps1  # Windows: core switching logic
+  claudeglm.ps1             # Windows: GLM session launcher
+  lib/
+    session-repair.mjs       # Core repair engine (normalize foreign JSONL)
+    session-guard.mjs        # Pre-resume guard (detect + trigger repair)
+  linux/
+    claude_profile.sh        # Linux/macOS: profile with all shell functions
+    claudeglm.sh             # Linux/macOS: GLM session launcher + tagger
+    claudeali.sh             # Linux/macOS: Alibaba session launcher + tagger
+    claude-resume.sh         # Linux/macOS: auto-repair + resume wrapper
+    install.sh               # Linux/macOS: installer script
+  glm-implementation-skill/  # Skill definition for GLM implementation
+```
 
 ## Security Notes
 
-- API keys are stored locally in `~\.claude\api_keys_backup.json`
+- API keys are stored locally in `~/.claude/api_keys_backup.json` (chmod 600)
 - Never commit API keys to version control
-- The `.gitignore` excludes sensitive files
+- The `.gitignore` excludes sensitive files and backups
 
 ## License
 
-MIT License - Feel free to modify and distribute
+MIT License - Feel free to modify and distribute.
 
 ## Contributing
 

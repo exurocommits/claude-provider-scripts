@@ -9,3 +9,13 @@
 # Ignore temporary files
 *.tmp
 *.log
+
+# OS files
+.DS_Store
+
+# Node
+node_modules/
+package-lock.json
+
+# Swarm artifacts
+swarm-manifest.md
