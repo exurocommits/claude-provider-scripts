@@ -33,8 +33,8 @@ if ($apiBackup['GLM']) {
 
 Write-Host ""
 Write-Host "=== Launching Claude Code with GLM Provider ===" -ForegroundColor Cyan
-Write-Host "✅ Using ENVIRONMENT VARIABLES (safe for concurrent sessions)" -ForegroundColor Green
-Write-Host "✅ Does NOT modify settings.json" -ForegroundColor Green
+Write-Host "Using ENVIRONMENT VARIABLES (safe for concurrent sessions)" -ForegroundColor Green
+Write-Host "Does NOT modify settings.json" -ForegroundColor Green
 Write-Host ""
 
 # Set environment variables for THIS PROCESS ONLY
@@ -45,11 +45,56 @@ $env:ANTHROPIC_DEFAULT_OPUS_MODEL = "glm-4.7"
 $env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "glm-4.5-air"
 
 Write-Host "Provider: GLM (Z.AI)" -ForegroundColor White
-Write-Host "Models: Sonnet/Opus → glm-4.7, Haiku → glm-4.5-air" -ForegroundColor Gray
+Write-Host "Models: Sonnet/Opus -> glm-4.7, Haiku -> glm-4.5-air" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Launching Claude Code..." -ForegroundColor Green
 Write-Host ""
 
+# --- Session tagging: snapshot before launch ---
+$sessionsIndex = "$env:USERPROFILE\.claude\sessions-index.json"
+$sessionProviders = "$env:USERPROFILE\.claude\session_providers.json"
+$sessionsBefore = @()
+if (Test-Path $sessionsIndex) {
+    try {
+        $idxContent = Get-Content $sessionsIndex -Raw | ConvertFrom-Json
+        $sessionsBefore = $idxContent.PSObject.Properties.Name
+    } catch {
+        $sessionsBefore = @()
+    }
+}
+
 # Launch Claude Code - it will inherit the environment variables
 & claude @args
-exit $LASTEXITCODE
+$claudeExit = $LASTEXITCODE
+
+# --- Session tagging: diff and tag new sessions ---
+if (Test-Path $sessionsIndex) {
+    try {
+        $idxContent = Get-Content $sessionsIndex -Raw | ConvertFrom-Json
+        $sessionsAfter = $idxContent.PSObject.Properties.Name
+        $newSessions = $sessionsAfter | Where-Object { $_ -notin $sessionsBefore }
+        if ($newSessions) {
+            $providers = @{}
+            if (Test-Path $sessionProviders) {
+                $existingProviders = Get-Content $sessionProviders -Raw | ConvertFrom-Json
+                foreach ($prop in $existingProviders.PSObject.Properties) {
+                    $providers[$prop.Name] = $prop.Value
+                }
+            }
+            $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            foreach ($uuid in $newSessions) {
+                $providers[$uuid] = [PSCustomObject]@{
+                    provider = "glm"
+                    model    = "glm-4.7"
+                    tagged   = $timestamp
+                }
+            }
+            $providers | ConvertTo-Json | Set-Content "${sessionProviders}.tmp"
+            Move-Item -Force "${sessionProviders}.tmp" $sessionProviders
+            Write-Host "Tagged $($newSessions.Count) new session(s) as GLM" -ForegroundColor Gray
+        }
+    } catch {
+        Write-Host "Warning: Could not tag sessions: $_" -ForegroundColor Yellow
+    }
+}
+exit $claudeExit

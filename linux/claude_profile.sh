@@ -55,10 +55,11 @@ Set-ClaudeWindowTitle() {
         base_url=$(jq -r '.env.ANTHROPIC_BASE_URL // empty' "$CLAUDE_SETTINGS_PATH" 2>/dev/null)
         if [[ "$base_url" == *"z.ai"* ]]; then
             provider="GLM"
+        elif [[ "$base_url" == *"dashscope"* ]]; then
+            provider="Alibaba"
         fi
     fi
     
-    # Set terminal title (works in xterm, gnome-terminal, etc.)
     echo -ne "\033]0;[$provider] ${SHELL##*/}\007"
 }
 
@@ -83,10 +84,17 @@ claudeglm() {
 }
 
 # =============================================================================
-# Clear GLM environment variables to return to Anthropic
+# Launch Claude with Alibaba Cloud provider (safe - uses environment variables)
+# =============================================================================
+claudeali() {
+    bash "$CLAUDE_SCRIPT_PATH/claudeali.sh" "$@"
+}
+
+# =============================================================================
+# Clear GLM/Alibaba environment variables to return to Anthropic
 # =============================================================================
 claude-reset() {
-    echo -e "${_C_YELLOW}Clearing GLM environment variables...${_C_NC}"
+    echo -e "${_C_YELLOW}Clearing custom provider environment variables...${_C_NC}"
     unset ANTHROPIC_BASE_URL
     unset ANTHROPIC_AUTH_TOKEN
     unset ANTHROPIC_DEFAULT_SONNET_MODEL
@@ -110,6 +118,8 @@ claude-info() {
         
         if [[ "$base_url" == *"z.ai"* ]]; then
             provider="GLM (Z.AI)"
+        elif [[ "$base_url" == *"dashscope"* ]]; then
+            provider="Alibaba Cloud (Qwen)"
         else
             provider="Anthropic"
         fi
@@ -135,10 +145,11 @@ claude-info() {
         echo -e "${_C_GRAY}  Haiku: $haiku${_C_NC}"
         echo ""
         echo -e "${_C_YELLOW}Commands:${_C_NC}"
-        echo -e "${_C_WHITE}  cswitch          - Toggle between GLM and Anthropic${_C_NC}"
-        echo -e "${_C_WHITE}  cswitch GLM      - Switch to GLM provider${_C_NC}"
+        echo -e "${_C_WHITE}  cswitch           - Toggle between GLM and Anthropic${_C_NC}"
+        echo -e "${_C_WHITE}  cswitch GLM       - Switch to GLM provider${_C_NC}"
         echo -e "${_C_WHITE}  cswitch Anthropic - Switch to Anthropic provider${_C_NC}"
-        echo -e "${_C_WHITE}  claudeglm        - Launch Claude with GLM (session only)${_C_NC}"
+        echo -e "${_C_GREEN}  claudeglm        - Launch Claude with GLM (session only)${_C_NC}"
+        echo -e "${_C_GREEN}  claudeali        - Launch Claude with Alibaba (session only)${_C_NC}"
         echo -e "${_C_WHITE}  claude           - Launch Claude with default provider${_C_NC}"
         echo -e "${_C_WHITE}  claude-info      - Show this info${_C_NC}"
         echo ""
@@ -161,6 +172,10 @@ hint() {
     echo -e "${_C_WHITE}  cswitch GLM      - Switch to GLM (Z.AI) provider${_C_NC}"
     echo -e "${_C_WHITE}  cswitch Anthropic - Switch to Anthropic provider${_C_NC}"
     echo -e "${_C_GREEN}  claudeglm        - Launch Claude with GLM (safe, uses env vars)${_C_NC}"
+    echo -e "${_C_GREEN}  claudeali        - Launch Claude with Alibaba (Qwen, safe)${_C_NC}"
+    echo -e "${_C_GREEN}  claude-resume    - Resume session with auto-repair + flag passthrough${_C_NC}"
+    echo -e "${_C_GREEN}  claude-repair    - Repair a session: claude-repair <uuid> | --all${_C_NC}"
+    echo -e "${_C_GREEN}  claude-check     - Dry-run check a session for issues${_C_NC}"
     echo -e "${_C_YELLOW}  claude-reset     - Clear GLM env vars to return to Anthropic${_C_NC}"
     echo -e "${_C_WHITE}  claude-info      - Show current Claude provider configuration${_C_NC}"
     echo ""
@@ -177,13 +192,52 @@ hint() {
     
     echo -e "${_C_MAGENTA}Tips:${_C_NC}"
     echo -e "${_C_GRAY}  - Use 'claudeglm' for one-off GLM sessions (safe with concurrent Claude)${_C_NC}"
+    echo -e "${_C_GRAY}  - Use 'claudeali' for one-off Alibaba sessions (safe with concurrent Claude)${_C_NC}"
     echo -e "${_C_GRAY}  - Use 'cswitch' to permanently change your default provider${_C_NC}"
     echo -e "${_C_GRAY}  - Check window title to see current provider at a glance${_C_NC}"
     echo ""
 }
 
-# Short alias for hint (hh to avoid conflicts)
-hh() { hint; }
+# =============================================================================
+# Resume a session with automatic provider-aware repair
+# Usage: claude-resume <uuid> [--dangerously-skip-permissions] [other flags]
+# =============================================================================
+claude-resume() {
+    local script_dir
+    if [[ -n "${BASH_SOURCE[0]}" ]]; then
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    else
+        script_dir="$CLAUDE_SCRIPT_PATH"
+    fi
+    bash "$script_dir/claude-resume.sh" "$@"
+}
+
+# =============================================================================
+# Session repair shortcuts (friendly names for node commands)
+# =============================================================================
+claude-repair() {
+    # Repair a specific session or all foreign sessions
+    # Usage: claude-repair <uuid>   OR   claude-repair --all
+    local script_dir
+    if [[ -n "${BASH_SOURCE[0]}" ]]; then
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    else
+        script_dir="$CLAUDE_SCRIPT_PATH"
+    fi
+    node "$script_dir/../lib/session-repair.mjs" "$@"
+}
+
+claude-check() {
+    # Dry-run check a session for foreign provider issues
+    # Usage: claude-check <uuid>
+    local script_dir
+    if [[ -n "${BASH_SOURCE[0]}" ]]; then
+        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    else
+        script_dir="$CLAUDE_SCRIPT_PATH"
+    fi
+    node "$script_dir/../lib/session-repair.mjs" --check "$@"
+}
 
 # =============================================================================
 # Set initial title on profile load
